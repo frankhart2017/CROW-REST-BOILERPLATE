@@ -3,7 +3,10 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
+#include <string>
+#include <algorithm>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 #include <bsoncxx/builder/stream/document.hpp>
 #include <bsoncxx/json.hpp>
@@ -125,6 +128,53 @@ int main(int argc, char *argv[]) {
 
   CROW_ROUTE(app, "/login/<string>/<string>").methods(HTTPMethod::Post)
     ([&collection](const request &req, response &res, string email, string password){
+
+      auto doc = collection.find_one(
+        make_document(kvp("email", email)));
+
+      res.set_header("Content-Type", "application/json");
+
+      crow::json::wvalue ret;
+
+      if(!doc) {
+        ret["status"] = "Account does not exist!";
+
+        res.write(crow::json::dump(ret));
+        res.end();
+      } else {
+        password = sha512(password);
+        doc = collection.find_one(
+          make_document(kvp("email", email), kvp("password", password)));
+
+        if(!doc) {
+          ret["status"] = "Incorrect password!";
+
+          res.write(crow::json::dump(ret));
+          res.end();
+        } else {
+          ret["status"] = "Logged in successfully!";
+
+          res.write(crow::json::dump(ret));
+          res.end();
+        }
+      }
+
+    });
+
+  CROW_ROUTE(app, "/loginJSON").methods(HTTPMethod::Post)
+    ([&collection](const crow::request &req, response &res){
+
+      auto data = crow::json::load(req.body);
+
+      ostringstream emailString, passwordString;
+      emailString<<data["email"];
+      passwordString<<data["password"];
+
+      string email = emailString.str();
+      string password = passwordString.str();
+
+      boost::replace_all(email, "\"", "");
+      boost::replace_all(password, "\"", "");
 
       auto doc = collection.find_one(
         make_document(kvp("email", email)));
