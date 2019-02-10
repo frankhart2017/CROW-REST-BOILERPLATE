@@ -123,7 +123,42 @@ int main(int argc, char *argv[]) {
 
     });
 
-    CROW_ROUTE(app, "/users")
+  CROW_ROUTE(app, "/login/<string>/<string>").methods(HTTPMethod::Post)
+    ([&collection](const request &req, response &res, string email, string password){
+
+      auto doc = collection.find_one(
+        make_document(kvp("email", email)));
+
+      res.set_header("Content-Type", "application/json");
+
+      crow::json::wvalue ret;
+
+      if(!doc) {
+        ret["status"] = "Account does not exist!";
+
+        res.write(crow::json::dump(ret));
+        res.end();
+      } else {
+        password = sha512(password);
+        doc = collection.find_one(
+          make_document(kvp("email", email), kvp("password", password)));
+
+        if(!doc) {
+          ret["status"] = "Incorrect password!";
+
+          res.write(crow::json::dump(ret));
+          res.end();
+        } else {
+          ret["status"] = "Logged in successfully!";
+
+          res.write(crow::json::dump(ret));
+          res.end();
+        }
+      }
+
+    });
+
+  CROW_ROUTE(app, "/users")
     ([&collection](){
       mongocxx::options::find opts;
       opts.limit(10);
