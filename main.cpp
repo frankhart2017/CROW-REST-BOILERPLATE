@@ -221,6 +221,11 @@ int main(int argc, char *argv[]) {
       return crow::response(os.str());
     });
 
+  CROW_ROUTE(app, "/")
+    ([](){
+      return "<h1>Hello Crow App</h1>";
+    });
+
   char* port = getenv("PORT");
   uint16_t iPort = static_cast<uint16_t>(port != NULL? stoi(port): 18080);
   cout<<"PORT = "<<iPort<<"\n";
